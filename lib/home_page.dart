@@ -452,7 +452,7 @@ class _HomePageState extends State<HomePage> {
                       child: Column(
                         children: [
                           Text(
-                            'Want to study the full curriculum? Try SafePrep Manager — we\'re so confident you\'ll pass the ServSafe® exam on your first attempt if you use SafePrep Manager, we\'ll give you your money back if you don\'t.',
+                            'Want the full curriculum? SafePrep Manager\'s got it — and you can try it free first. When you\'re ready, we\'re confident enough to guarantee it: pass your ServSafe® exam or get every penny back.',
                             style: TextStyle(
                               fontSize: AppFonts.caption,
                               color: AppColors.subtleText,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'constants.dart';
 import 'csv_loader.dart';
@@ -419,6 +420,14 @@ class _SixtySecondRefreshPageState extends State<SixtySecondRefreshPage> {
                     : _buildCategoryGrid(),
               ),
             ),
+
+            // FSME command box — fully self-contained, own timers, never
+            // touches this page's state or triggers a rebuild here.
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: FsmeCommandBox(),
+            ),
+
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: SizedBox(
@@ -443,6 +452,223 @@ class _SixtySecondRefreshPageState extends State<SixtySecondRefreshPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── FsmeCommandBox ───────────────────────────────────────────────────────
+// Self-contained FSME character: two glowing red eyes (idle blink + look
+// left/right) sitting above a dark terminal box that types out one
+// message at a time, pauses, clears, and moves to the next. Fully
+// independent of the page it's dropped into — no external state read or
+// written, so it can never interfere with the burst/timer flow above it.
+class FsmeCommandBox extends StatefulWidget {
+  const FsmeCommandBox({super.key});
+
+  @override
+  State<FsmeCommandBox> createState() => _FsmeCommandBoxState();
+}
+
+class _FsmeCommandBoxState extends State<FsmeCommandBox> {
+  static const List<String> _messages = [
+    "Smart. Get a quick refresher in before the boss gets back.",
+    "FATTOM. Food, Acidity, Temperature, Time, Oxygen, Moisture.",
+    "Did you know I was the one who came up with that acronym? I did. Really, I did. Stop looking at me like that.",
+    "Hey. What was that last one? I missed it. Can you go back? Why not? Alright. I'll wait till it comes around again.",
+    "I get it. Refreshing is always a great idea. And this 60-second tool is great for that. Do you know it once took me 0.0000001 milliseconds to understand Einstein's Theory of Relativity... I know. Took forever. (I still don't understand Clostridium perfringens or why you need to know it.)",
+    "There once was a chef feeling bold, who left chicken out to grow old. At forty-one degrees, bacteria says 'please,' and multiplies faster than gold.",
+    "A cook thought the danger zone's fine, 'It's just forty-one, not a crime.' But at one-thirty-five, germs come alive— now it's food poisoning o'clock, not dinner time.",
+    "There once was a busboy named Wade, who left the raw shrimp unfrayed. At room temp it sat, growing something quite fat, anyway, I've never liked shrimp.",
+    "Are we done yet? I have to use the digital boys' room.",
+  ];
+
+  static const Duration _messageHold = Duration(seconds: 10);
+  static const Duration _typeSpeed = Duration(milliseconds: 28);
+  static const Duration _blinkEvery = Duration(seconds: 4);
+  static const Duration _lookEvery = Duration(seconds: 3);
+
+  int _messageIndex = 0;
+  String _displayedText = '';
+  Timer? _typeTimer;
+  Timer? _holdTimer;
+  Timer? _blinkTimer;
+  Timer? _lookTimer;
+
+  bool _blinking = false;
+  _EyeLook _look = _EyeLook.center;
+
+  @override
+  void initState() {
+    super.initState();
+    _typeCurrentMessage();
+    _blinkTimer = Timer.periodic(_blinkEvery, (_) => _doBlink());
+    _lookTimer = Timer.periodic(_lookEvery, (_) => _doLook());
+  }
+
+  @override
+  void dispose() {
+    _typeTimer?.cancel();
+    _holdTimer?.cancel();
+    _blinkTimer?.cancel();
+    _lookTimer?.cancel();
+    super.dispose();
+  }
+
+  void _typeCurrentMessage() {
+    final full = _messages[_messageIndex];
+    _displayedText = '';
+    int charIndex = 0;
+    _typeTimer?.cancel();
+    _typeTimer = Timer.periodic(_typeSpeed, (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (charIndex >= full.length) {
+        timer.cancel();
+        _holdTimer = Timer(_messageHold, _advanceMessage);
+        return;
+      }
+      setState(() => _displayedText += full[charIndex]);
+      charIndex++;
+    });
+  }
+
+  void _advanceMessage() {
+    if (!mounted) return;
+    setState(() {
+      _messageIndex = (_messageIndex + 1) % _messages.length;
+    });
+    _typeCurrentMessage();
+  }
+
+  void _doBlink() {
+    if (!mounted) return;
+    setState(() => _blinking = true);
+    Timer(const Duration(milliseconds: 180), () {
+      if (mounted) setState(() => _blinking = false);
+    });
+  }
+
+  void _doLook() {
+    if (!mounted) return;
+    final roll = _messageIndex % 3;
+    final next = roll == 0
+        ? _EyeLook.left
+        : roll == 1
+        ? _EyeLook.right
+        : _EyeLook.center;
+    setState(() => _look = next);
+    if (next != _EyeLook.center) {
+      Timer(const Duration(milliseconds: 900), () {
+        if (mounted) setState(() => _look = _EyeLook.center);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A0A0A),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF330000)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: 16,
+            children: [
+              _FsmeEye(blinking: _blinking, look: _look),
+              _FsmeEye(blinking: _blinking, look: _look),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF050505),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: const Color(0xFF220000)),
+            ),
+            child: RichText(
+              text: TextSpan(
+                children: [
+                  const TextSpan(
+                    text: '> ',
+                    style: TextStyle(
+                      color: Color(0xFF440000),
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
+                  ),
+                  TextSpan(
+                    text: _displayedText,
+                    style: const TextStyle(
+                      color: Color(0xFFCC0000),
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum _EyeLook { left, right, center }
+
+class _FsmeEye extends StatelessWidget {
+  final bool blinking;
+  final _EyeLook look;
+
+  const _FsmeEye({required this.blinking, required this.look});
+
+  @override
+  Widget build(BuildContext context) {
+    const double size = 26;
+    double pupilOffset = 0;
+    if (look == _EyeLook.left) pupilOffset = -5;
+    if (look == _EyeLook.right) pupilOffset = 5;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      width: size,
+      height: blinking ? 3 : size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const RadialGradient(
+          center: Alignment(-0.3, -0.3),
+          colors: [Color(0xFFFF8888), Color(0xFFCC0000), Color(0xFF2A0000)],
+        ),
+        boxShadow: const [
+          BoxShadow(color: Color(0x99FF0000), blurRadius: 8, spreadRadius: 1),
+        ],
+      ),
+      child: blinking
+          ? null
+          : AnimatedAlign(
+              duration: const Duration(milliseconds: 400),
+              alignment: Alignment(pupilOffset / 10, 0),
+              child: Container(
+                width: size * 0.4,
+                height: size * 0.4,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [Color(0xFF660000), Color(0xFF1A0000)],
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }

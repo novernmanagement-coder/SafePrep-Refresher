@@ -22,6 +22,12 @@ class _FlashCardsPageState extends State<FlashCardsPage>
   late AnimationController _flipController;
   late Animation<double> _scaleX;
 
+  // Reveal "pop" — grows the card briefly then springs back to size the
+  // instant the answer flips into view. Gives the payoff moment a bit of
+  // tactile game-feel without touching the flip mechanic itself.
+  late AnimationController _popController;
+  late Animation<double> _popScale;
+
   static const Map<String, _Suit> _categorySuits = {
     'Time & Temperature': _Suit('🌡', Color(0xFFC0392B), 'T&T'),
     'Cross-Contamination': _Suit('⚠', Color(0xFFE67E22), 'CC'),
@@ -43,12 +49,35 @@ class _FlashCardsPageState extends State<FlashCardsPage>
     _scaleX = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _flipController, curve: Curves.easeInOut),
     );
+
+    _popController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
+    _popScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 1.08,
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.08,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 60,
+      ),
+    ]).animate(_popController);
+
     _loadCards();
   }
 
   @override
   void dispose() {
     _flipController.dispose();
+    _popController.dispose();
     super.dispose();
   }
 
@@ -78,7 +107,11 @@ class _FlashCardsPageState extends State<FlashCardsPage>
         _flipCard(() => setState(() => _state = _CardState.question));
         break;
       case _CardState.question:
-        _flipCard(() => setState(() => _state = _CardState.reveal));
+        _flipCard(() => setState(() => _state = _CardState.reveal)).then((_) {
+          if (mounted) {
+            _popController.forward(from: 0);
+          }
+        });
         break;
       case _CardState.reveal:
         break;
@@ -229,10 +262,14 @@ class _FlashCardsPageState extends State<FlashCardsPage>
               child: _deckShadow(288, 360, const Color(0xFF123560)),
             ),
             AnimatedBuilder(
-              animation: _scaleX,
+              animation: Listenable.merge([_scaleX, _popScale]),
               builder: (_, _) => Transform(
                 alignment: Alignment.center,
-                transform: Matrix4.diagonal3Values(_scaleX.value, 1.0, 1.0),
+                transform: Matrix4.diagonal3Values(
+                  _scaleX.value * _popScale.value,
+                  _popScale.value,
+                  1.0,
+                ),
                 child: GestureDetector(
                   onTap: _onCardTap,
                   child: Container(
