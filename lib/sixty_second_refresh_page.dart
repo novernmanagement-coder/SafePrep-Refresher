@@ -203,7 +203,7 @@ class _SixtySecondRefreshPageState extends State<SixtySecondRefreshPage> {
   Widget _buildCatButton(String category) {
     final color = categoryColors[category] ?? AppColors.gold;
     return SizedBox(
-      height: 64,
+      height: 76,
       child: ElevatedButton(
         onPressed: () => _startCategoryBursts(category),
         style: ElevatedButton.styleFrom(
@@ -421,12 +421,14 @@ class _SixtySecondRefreshPageState extends State<SixtySecondRefreshPage> {
               ),
             ),
 
-            // FSME command box — fully self-contained, own timers, never
-            // touches this page's state or triggers a rebuild here.
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: FsmeCommandBox(),
-            ),
+            // FSME command box — only shown on the category-select screen.
+            // Hidden during the burst quiz since it scrolls too fast to
+            // read FSME's messages anyway.
+            if (!_showingBurst)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: FsmeCommandBox(),
+              ),
 
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -482,8 +484,8 @@ class _FsmeCommandBoxState extends State<FsmeCommandBox> {
     "Are we done yet? I have to use the digital boys' room.",
   ];
 
-  static const Duration _messageHold = Duration(seconds: 10);
-  static const Duration _typeSpeed = Duration(milliseconds: 28);
+  static const Duration _messageHold = Duration(seconds: 5);
+  static const Duration _typeSpeed = Duration(milliseconds: 16);
   static const Duration _blinkEvery = Duration(seconds: 4);
   static const Duration _lookEvery = Duration(seconds: 3);
 

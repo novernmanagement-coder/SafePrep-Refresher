@@ -2,7 +2,7 @@ name: safepreprefresher
 description: "SafePrep Refresher - Quick Study Tools for ServSafe"
 publish_to: 'none'
 
-version: 1.2.0+3
+version: 1.2.0+4
 
 environment:
   sdk: ^3.11.5
