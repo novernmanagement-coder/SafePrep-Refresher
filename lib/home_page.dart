@@ -247,6 +247,7 @@ class _HomePageState extends State<HomePage> {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               title,
@@ -255,6 +256,8 @@ class _HomePageState extends State<HomePage> {
                 fontWeight: FontWeight.w600,
                 color: AppColors.gold,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Text(
@@ -264,6 +267,8 @@ class _HomePageState extends State<HomePage> {
                 color: AppColors.subtleText,
                 height: 1.4,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
