@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'constants.dart';
 import 'csv_loader.dart';
+import 'mixpanel_service.dart';
 import 'home_page.dart';
 
 enum _CardState { deck, question, reveal }
@@ -18,6 +19,13 @@ class _FlashCardsPageState extends State<FlashCardsPage>
   int _currentIndex = 0;
   _CardState _state = _CardState.deck;
   bool _isAnimating = false;
+
+  // Tracks how many distinct cards actually got flipped to reveal, for the
+  // cards_reviewed property on flash_cards_completed — distinct from
+  // _currentIndex, which just tracks position and can't tell us whether
+  // the reveal side was ever seen for the final card.
+  int _cardsReviewed = 0;
+  bool _completedFired = false;
 
   late AnimationController _flipController;
   late Animation<double> _scaleX;
@@ -42,6 +50,8 @@ class _FlashCardsPageState extends State<FlashCardsPage>
   @override
   void initState() {
     super.initState();
+    MixpanelService.instance.track('flash_cards_started');
+
     _flipController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 160),
@@ -109,6 +119,7 @@ class _FlashCardsPageState extends State<FlashCardsPage>
       case _CardState.question:
         _flipCard(() => setState(() => _state = _CardState.reveal)).then((_) {
           if (mounted) {
+            _cardsReviewed++;
             _popController.forward(from: 0);
           }
         });
@@ -118,9 +129,19 @@ class _FlashCardsPageState extends State<FlashCardsPage>
     }
   }
 
+  void _fireCompletedIfDone() {
+    if (_completedFired) return;
+    _completedFired = true;
+    MixpanelService.instance.track(
+      'flash_cards_completed',
+      properties: {'cards_reviewed': _cardsReviewed},
+    );
+  }
+
   void _onNext() {
     if (_isAnimating) return;
     if (_currentIndex >= _cards.length - 1) {
+      _fireCompletedIfDone();
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
@@ -638,10 +659,13 @@ class _FlashCardsPageState extends State<FlashCardsPage>
             width: double.infinity,
             height: 44,
             child: ElevatedButton(
-              onPressed: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const HomePage()),
-              ),
+              onPressed: () {
+                _fireCompletedIfDone();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HomePage()),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold.withValues(alpha: 0.3),
                 foregroundColor: AppColors.gold,

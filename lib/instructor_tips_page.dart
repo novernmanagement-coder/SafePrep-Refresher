@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'constants.dart';
 import 'csv_loader.dart';
+import 'mixpanel_service.dart';
 import 'home_page.dart';
 
 class InstructorTipsPage extends StatefulWidget {
@@ -53,6 +54,7 @@ class _InstructorTipsPageState extends State<InstructorTipsPage> {
   @override
   void initState() {
     super.initState();
+    MixpanelService.instance.track('proctor_tips_viewed');
     _loadTips();
   }
 

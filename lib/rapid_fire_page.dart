@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'constants.dart';
 import 'csv_loader.dart';
+import 'mixpanel_service.dart';
 import 'home_page.dart';
 
 class RapidFirePage extends StatefulWidget {
@@ -51,6 +52,10 @@ class _RapidFirePageState extends State<RapidFirePage>
   int _correct = 0;
   int _incorrect = 0;
   int _skipped = 0;
+
+  // Guards rapid_fire_completed from firing more than once per session —
+  // _stopAndExit can in principle be reached from more than one control.
+  bool _completedFired = false;
 
   String _questionText = '';
   String _answerAText = '';
@@ -101,6 +106,10 @@ class _RapidFirePageState extends State<RapidFirePage>
       _selectedCategory = category;
       _showCategoryPicker = false;
     });
+    MixpanelService.instance.track(
+      'rapid_fire_started',
+      properties: {'category': category ?? 'All Categories'},
+    );
     await _loadDeck();
     _runSession();
   }
@@ -279,8 +288,25 @@ class _RapidFirePageState extends State<RapidFirePage>
       });
   }
 
+  void _fireCompletedIfDone() {
+    if (_completedFired) return;
+    // Nothing to report if the session never got underway (category
+    // picker still showing, no questions answered/skipped yet).
+    if (_correct == 0 && _incorrect == 0 && _skipped == 0) return;
+    _completedFired = true;
+    MixpanelService.instance.track(
+      'rapid_fire_completed',
+      properties: {
+        'correct': _correct,
+        'incorrect': _incorrect,
+        'skipped': _skipped,
+      },
+    );
+  }
+
   Future<void> _stopAndExit() async {
     _isStopped = true;
+    _fireCompletedIfDone();
     await _saveResults();
     if (mounted)
       Navigator.pushReplacement(

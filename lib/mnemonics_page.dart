@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'constants.dart';
+import 'mixpanel_service.dart';
 import 'home_page.dart';
 
-class MnemonicsPage extends StatelessWidget {
+class MnemonicsPage extends StatefulWidget {
   const MnemonicsPage({super.key});
 
+  @override
+  State<MnemonicsPage> createState() => _MnemonicsPageState();
+}
+
+class _MnemonicsPageState extends State<MnemonicsPage> {
   static const List<_MnemonicEntry> _mnemonics = [
     _MnemonicEntry('E.C.O.L.I.™', 'Bacteria', Color(0xFFC0392B), [
       ('E', 'Entrails — ground beef, intestines'),
@@ -102,6 +108,12 @@ class MnemonicsPage extends StatelessWidget {
       ('S', 'Suppliers must freeze properly'),
     ]),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    MixpanelService.instance.track('mnemonics_viewed');
+  }
 
   @override
   Widget build(BuildContext context) {

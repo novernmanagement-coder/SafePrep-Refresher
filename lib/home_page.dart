@@ -124,17 +124,32 @@ class _HomePageState extends State<HomePage> {
     if (picked != null) {
       setState(() => _state.examDate = picked);
       AppStatePersistence.save();
+      // days_until captures how far out the user set their exam, useful
+      // for correlating tool engagement against exam proximity later.
+      MixpanelService.instance.track(
+        'exam_date_set',
+        properties: {'days_until': _state.daysUntilExam},
+      );
     }
   }
 
   Future<void> _openSafePrepManager() async {
+    MixpanelService.instance.track('safeprep_manager_link_tapped');
     final uri = Uri.parse(AppStrings.safePrepManagerUrl);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
-  void _go(Widget page) {
+  // toolName is the analytics identifier for the tile tapped (e.g.
+  // 'sixty_second_refresh', 'rapid_fire'); fires a single tool_selected
+  // event with a tool_name property, mirroring Manager's trainer_selected
+  // pattern for its Peace of Mind pages.
+  void _go(Widget page, String toolName) {
+    MixpanelService.instance.track(
+      'tool_selected',
+      properties: {'tool_name': toolName},
+    );
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => page),
@@ -411,32 +426,38 @@ class _HomePageState extends State<HomePage> {
                         _buildToolButton(
                           '⏱ 60-Second Refresh',
                           'Quick bursts. Keep knowledge fresh.',
-                          () => _go(const SixtySecondRefreshPage()),
+                          () => _go(
+                            const SixtySecondRefreshPage(),
+                            'sixty_second_refresh',
+                          ),
                         ),
                         _buildToolButton(
                           '⚡ Rapid Fire',
                           'Fast paced — no time to think, just react.',
-                          () => _go(const RapidFirePage()),
+                          () => _go(const RapidFirePage(), 'rapid_fire'),
                         ),
                         _buildToolButton(
                           '🃏 Flash Cards',
                           'The most proven method for retention.',
-                          () => _go(const FlashCardsPage()),
+                          () => _go(const FlashCardsPage(), 'flash_cards'),
                         ),
                         _buildToolButton(
                           '🎯 Scenario Drills',
                           'Real situations. Real retention.',
-                          () => _go(const ScenarioDrillsPage()),
+                          () => _go(
+                            const ScenarioDrillsPage(),
+                            'scenario_drills',
+                          ),
                         ),
                         _buildToolButton(
                           '🧠 Mnemonics',
                           'Acronyms that make the hard stuff stick.',
-                          () => _go(const MnemonicsPage()),
+                          () => _go(const MnemonicsPage(), 'mnemonics'),
                         ),
                         _buildToolButton(
                           '📖 Proctor Tips',
                           'Straight from the people who run them.',
-                          () => _go(const InstructorTipsPage()),
+                          () => _go(const InstructorTipsPage(), 'proctor_tips'),
                         ),
                       ],
                     ),

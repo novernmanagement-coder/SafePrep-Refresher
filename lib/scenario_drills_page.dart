@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'constants.dart';
 import 'csv_loader.dart';
+import 'mixpanel_service.dart';
 import 'home_page.dart';
 
 class ScenarioDrillsPage extends StatefulWidget {
@@ -28,6 +29,11 @@ class _ScenarioDrillsPageState extends State<ScenarioDrillsPage> {
   double _explanationOpacity = 0;
   double _nextButtonOpacity = 0;
   bool _isExplaining = false;
+
+  // scenario_drills_started fires once per page visit, not once per
+  // scenario — this guards it since _init/_loadScenarios only runs once
+  // anyway, but keeps the intent explicit if that ever changes.
+  bool _startedFired = false;
 
   final ScrollController _scrollController = ScrollController();
 
@@ -60,6 +66,10 @@ class _ScenarioDrillsPageState extends State<ScenarioDrillsPage> {
 
   Future<void> _init() async {
     await _loadScenarios();
+    if (!_startedFired) {
+      _startedFired = true;
+      MixpanelService.instance.track('scenario_drills_started');
+    }
     _showPhase1();
   }
 
@@ -111,11 +121,19 @@ class _ScenarioDrillsPageState extends State<ScenarioDrillsPage> {
 
   void _onChoiceSelected(int choiceIndex) {
     if (_phase != _Phase.choices) return;
+    final isCorrect = choiceIndex == _current!.correctChoice;
+    // Fires per-answer rather than a single completion event — Scenario
+    // Drills loops/reshuffles indefinitely rather than ending, so there's
+    // no natural "session complete" moment to hang a summary event on.
+    MixpanelService.instance.track(
+      'scenario_drill_answered',
+      properties: {'is_correct': isCorrect},
+    );
     setState(() {
       _selectedChoice = choiceIndex;
       _phase = _Phase.result;
     });
-    _transitionToPhase3(choiceIndex == _current!.correctChoice);
+    _transitionToPhase3(isCorrect);
   }
 
   Future<void> _transitionToPhase3(bool isCorrect) async {
