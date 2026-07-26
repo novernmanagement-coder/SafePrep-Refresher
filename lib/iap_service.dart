@@ -4,7 +4,11 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'app_state.dart';
 import 'app_state_persistence.dart';
 
-const String kProductUnlock = 'com.geraldmiller.safepreprefresher.unlock';
+// New product ID. The previous IAP
+// (com.geraldmiller.safepreprefresher.unlock) got stuck in an App Store
+// review loop, so this is a fresh non-consumable created clean in App
+// Store Connect. Must match the new Product ID exactly.
+const String kProductUnlock = 'com.geraldmiller.safepreprefresher.unlock2';
 
 class IAPService {
   IAPService._();
