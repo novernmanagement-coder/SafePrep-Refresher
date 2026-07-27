@@ -4,11 +4,12 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'app_state.dart';
 import 'app_state_persistence.dart';
 
-// New product ID. The previous IAP
-// (com.geraldmiller.safepreprefresher.unlock) got stuck in an App Store
-// review loop, so this is a fresh non-consumable created clean in App
-// Store Connect. Must match the new Product ID exactly.
-const String kProductUnlock = 'com.geraldmiller.safepreprefresher.unlock2';
+// New product ID. Previous IDs (...unlock and ...unlock2) are burned:
+// once a product ID is created it can never be reused for the team, even
+// after the IAP is deleted. ...unlock got stuck in review; ...unlock2 was
+// created then deleted, permanently retiring that string. This is a fresh,
+// never-used ID. Must match the new Product ID in App Store Connect exactly.
+const String kProductUnlock = 'com.geraldmiller.safepreprefresher.unlock3';
 
 class IAPService {
   IAPService._();
