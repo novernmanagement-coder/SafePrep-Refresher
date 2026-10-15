@@ -3,7 +3,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'constants.dart';
 import 'app_state.dart';
 import 'app_state_persistence.dart';
-import 'iap_service.dart';
 import 'home_page.dart';
 import 'mixpanel_service.dart';
 
@@ -16,13 +15,11 @@ class IntroPage extends StatefulWidget {
 
 class _IntroPageState extends State<IntroPage> {
   DateTime _examDate = DateTime.now().add(const Duration(days: 7));
-  bool _purchasing = false;
   int? _selectedQuickDays;
 
   @override
   void initState() {
     super.initState();
-    IAPService.instance.initialize();
     MixpanelService.instance.track('intro_viewed');
     AppState().examDate = _examDate;
     AppStatePersistence.save();
@@ -68,25 +65,16 @@ class _IntroPageState extends State<IntroPage> {
     }
   }
 
-  Future<void> _purchase() async {
-    setState(() => _purchasing = true);
-    MixpanelService.instance.track('purchase_tapped');
-    final result = await IAPService.instance.buyUnlock();
-    if (!mounted) return;
-    setState(() => _purchasing = false);
-
-    if (result == IAPResult.initiated) {
-      if (AppState().hasUnlockedApp) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
-      }
-    } else if (result.userMessage != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(result.userMessage!)));
-    }
+  // Refresher is free: "Start studying" marks the app as unlocked (so this page is skipped
+  // on the next launch) and goes straight to the tools.
+  void _start() {
+    MixpanelService.instance.track('start_tapped');
+    AppState().hasUnlockedApp = true;
+    AppStatePersistence.save();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const HomePage()),
+    );
   }
 
   Future<void> _openSafePrepManager() async {
@@ -366,86 +354,28 @@ class _IntroPageState extends State<IntroPage> {
 
               const SizedBox(height: 16),
 
-              // Purchase card
-              Container(
+              // Start button (Refresher is free)
+              SizedBox(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0x12FFFFFF),
-                  border: Border.all(color: AppColors.cardBorder),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          '\$2.99',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.gold,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'one-time \u00b7 no subscription',
-                          style: TextStyle(
-                            fontSize: AppFonts.caption,
-                            color: AppColors.subtleText,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: AppSizes.primaryButtonHeight,
-                      child: ElevatedButton(
-                        onPressed: _purchasing ? null : _purchase,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.gold,
-                          foregroundColor: AppColors.goldText,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppSizes.buttonCornerRadius,
-                            ),
-                          ),
-                        ),
-                        child: _purchasing
-                            ? const CircularProgressIndicator(
-                                color: Color(0xFF1A3A5C),
-                              )
-                            : const Text(
-                                'Unlock SafePrep Refresher',
-                                style: TextStyle(
-                                  fontSize: AppFonts.button,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                height: AppSizes.primaryButtonHeight,
+                child: ElevatedButton(
+                  onPressed: _start,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold,
+                    foregroundColor: AppColors.goldText,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppSizes.buttonCornerRadius,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: () async {
-                        await IAPService.instance.restorePurchases();
-                        if (!mounted) return;
-                        if (AppState().hasUnlockedApp) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (_) => const HomePage()),
-                          );
-                        }
-                      },
-                      child: Text(
-                        'Restore Purchase',
-                        style: TextStyle(
-                          fontSize: AppFonts.caption,
-                          color: AppColors.subtleText,
-                        ),
-                      ),
+                  ),
+                  child: const Text(
+                    'Start studying \u2192',
+                    style: TextStyle(
+                      fontSize: AppFonts.button,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
+                  ),
                 ),
               ),
 
