@@ -13,10 +13,16 @@ plugins {
 // from the SafePrep project into this project's android/ folder. Never commit them.
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
-val hasKeystoreProperties = keystorePropertiesFile.exists()
-if (hasKeystoreProperties) {
+if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+} else if (System.getenv("CM_KEYSTORE_PATH") != null) {
+    // CodeMagic (Workflow Editor or codemagic.yaml) with Android code signing turned on
+    keystoreProperties["storeFile"] = System.getenv("CM_KEYSTORE_PATH")
+    keystoreProperties["storePassword"] = System.getenv("CM_KEYSTORE_PASSWORD")
+    keystoreProperties["keyAlias"] = System.getenv("CM_KEY_ALIAS")
+    keystoreProperties["keyPassword"] = System.getenv("CM_KEY_PASSWORD")
 }
+val hasKeystoreProperties = keystoreProperties.containsKey("storeFile")
 
 android {
     namespace = "com.geraldmiller.safepreprefresher"
